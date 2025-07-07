@@ -13,8 +13,8 @@ parent_path = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(parent_path))
 
 from .base import BaseStruc2Vec
-from algorithms.traditional.struc2vec import Struc2Vec
-from algorithms.graphlet_based.compute_edges_improved import generate_improved_structural_distance
+from libs.GraphEmbedding.ge.models.struc2vec import Struc2Vec
+from src.algorithms.graphlet_based.compute_edges_improved import generate_improved_structural_distance
 
 class GraphletStruc2Vec(BaseStruc2Vec):
     """Graphlet 增强 Struc2Vec 算法"""

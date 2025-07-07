@@ -14,7 +14,7 @@ sys.path.append(str(parent_path))
 from .base import BaseStruc2Vec
 from .original_struc2vec import OriginalStruc2Vec
 from .graphlet_struc2vec import GraphletStruc2Vec
-from algorithms.traditional.struc2vec import Struc2Vec
+from libs.GraphEmbedding.ge.models.struc2vec import Struc2Vec
 
 class FusionStruc2Vec(BaseStruc2Vec):
     """融合版本 Struc2Vec 算法"""

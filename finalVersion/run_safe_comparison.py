@@ -15,8 +15,8 @@ from pathlib import Path
 parent_path = Path(__file__).parent.parent
 sys.path.append(str(parent_path))
 
-from GraphEmbedding.ge.classify import read_node_label
-from algorithms.traditional.struc2vec import Struc2Vec
+from libs.GraphEmbedding.ge.classify import read_node_label
+from libs.GraphEmbedding.ge.models.struc2vec import Struc2Vec
 from src.algorithms.advanced_fusion_methods import AdvancedFusionStruc2Vec
 from safe_evaluation import safe_evaluate_method, DataLeakageChecker
 

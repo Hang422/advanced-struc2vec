@@ -20,7 +20,7 @@ from sklearn.preprocessing import StandardScaler
 parent_path = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(parent_path))
 
-from GraphEmbedding.ge.models.struc2vec import Struc2Vec
+from libs.GraphEmbedding.ge.models.struc2vec import Struc2Vec
 
 class MultiHeadAttentionFusion:
     """
@@ -551,7 +551,7 @@ class AdvancedFusionStruc2Vec:
     
     def _generate_advanced_fused_distances(self, graph, **kwargs):
         """生成高级融合距离"""
-        from algorithms.graphlet_based.compute_edges_improved import generate_improved_structural_distance
+        from src.algorithms.graphlet_based.compute_edges_improved import generate_improved_structural_distance
         import tempfile
         import shutil
         import time

@@ -22,8 +22,8 @@ try:
 except:
     pass  # 补丁是可选的
 
-from GraphEmbedding.ge.classify import read_node_label, Classifier
-from algorithms.traditional.struc2vec import Struc2Vec
+from libs.GraphEmbedding.ge.classify import read_node_label, Classifier
+from libs.GraphEmbedding.ge.models.struc2vec import Struc2Vec
 from algorithms.graphlet_based.compute_edges_improved import generate_improved_structural_distance
 
 def load_dataset(dataset_name):
