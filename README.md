@@ -76,13 +76,6 @@ python run_advanced_fusion_comparison.py --dataset wiki --fusion-methods attenti
 
 If this project helps your research, please consider citing:
 
-```bibtex
-@misc{advanced_graphlet_struc2vec,
-  title={Advanced Graphlet-Enhanced Struc2Vec with Multiple Fusion Strategies},
-  year={2024}
-}
-```
-
 ## License
 
 MIT License
