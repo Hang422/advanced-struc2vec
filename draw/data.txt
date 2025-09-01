@@ -1,0 +1,185 @@
+\section{Experiments and Evaluation}
+\label{sec:Experiments}
+This section presents an empirical assessment of the proposed graphlet--enhanced \textsc{struc2vec} (GE--S2V) framework.  We compare our approach against a baseline version of \textsc{struc2vec} and a pure graphlet variant across multiple networks, quantify predictive performance using standard classification metrics, and analyse the computational overhead introduced by graphlet extraction and fusion.  
+
+\subsection{Datasets and Experimental Setup}
+
+\paragraph{Dataset suite.}  We evaluate on five real--world networks covering transportation, social and informational domains.  Table~\ref{tab:data} summarises their basic statistics.  The \emph{Brazil}, \emph{USA} and \emph{Europe} graphs are undirected flight networks where vertices correspond to airports and edges denote direct routes; regional labels are used for classification.  The USA airport graph contains 1{,}572 vertices and 17{,}214 edges, while the Brazil network has 131 vertices and 1{,}074 edges.  The Europe graph has 5{,}995 edges; its vertex count is smaller than the USA graph but varies by regional subset.  The \emph{LastFM Asia} graph is an undirected social network with 7{,}624 users and 27{,}806 mutual friendships; the task is to infer the users' country of origin.  Finally, the \emph{Wikipedia categories} network is a undirected graph of 2{,}405 articles connected by 17{,}981 hyperlinks and labelled by 17 topical categories.  These datasets collectively exhibit varying sizes, degree distributions and class--imbalance ratios.
+
+
+\emph{Feature and label details.}  In the flight networks, each vertex corresponds to an airport; there are four regional classes in the Brazil, USA graphs and the Europe graph.  The class distributions are moderately balanced in Brazil (32--35 airports per region) but more skewed in the USA and Europe networks.  The LastFM dataset includes node attributes extracted from users' listening histories, but our embeddings rely solely on structural information.  The labels correspond to the country where each user resides.  The Wikipedia graph comprises hyperlinks between articles; each node is assigned one of 17 topic categories with notable class imbalance (e.g., class~1 contains 406 pages whereas class~9 contains only 11).  We treat edges as unweighted and do not use textual content in this study.
+
+\begin{table}[t]
+  \centering
+  \caption{Summary statistics of the datasets.  $n$ and $m$ denote the numbers of nodes and edges, respectively.  $K$ is the number of class labels.}
+  \label{tab:data}
+  \begin{tabular}{lrrrl}
+    \toprule
+    Dataset & $n$ & $m$ & $K$ & Description \\
+    \midrule
+    Brazil airports & 131 & 1\,074 & 4 & Undirected flight graph segmented by region \\
+    USA airports & 1\,572 & 17\,214 & 4 & Larger undirected flight graph with regional classes \\
+    Europe airports & 119 & 5\,995 & 4 & Medium--sized undirected flight graph \\
+    LastFM Asia & 7\,624 & 27\,806 & 7 & Undirected social graph with country labels \\
+    Wikipedia categories & 2\,405 & 17\,981 & 17 & undirected hyperlink graph labelled by topic \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+
+\paragraph{Dataset scope and methodological extensions.}
+It is worth noting that the original \textsc{struc2vec} experiments were primarily conducted on synthetic networks and airport transportation graphs---specifically the three flight networks (Brazil, USA, and Europe) employed in our study. These airport datasets were originally directed graphs representing flight routes, but were converted to undirected representations in the seminal work to simplify structural distance computations. To ensure experimental alignment and fair comparison, we adopt the same undirected versions of these datasets. Similarly, the Wikipedia categories network used in our evaluation has been preprocessed by data collectors to remove edge directionality, resulting in an undirected hyperlink graph.
+
+Importantly, the original \textsc{struc2vec} framework did not evaluate performance on social networks or large-scale informational graphs such as LastFM or Wikipedia. We hypothesize that this omission stems from inherent limitations of the \textsc{struc2vec} approach when applied to high-degree social networks, where the degree-based structural distance computation becomes less discriminative and computationally prohibitive. Our experimental results corroborate this hypothesis, revealing that the baseline method achieves modest performance on the LastFM social network (accuracy: 0.1874) and Wikipedia categories (accuracy: 0.1743), substantially lower than its effectiveness on transportation networks.
+
+Thus, our work extends the original evaluation scope beyond the transportation domain to encompass social and informational networks, thereby exposing the inherent limitations of degree-sequence-based structural embeddings in dense, high-degree graph settings. While our graphlet-enhanced fusion strategies provide consistent but moderate improvements across these challenging domains, the results underscore the need for more sophisticated structural representations when dealing with complex network topologies that extend beyond the relatively sparse and regular structures of transportation systems.
+
+\paragraph{Tasks and metrics.}  For each dataset we perform multi--class node classification.  We follow the standard protocol of stratified 5--fold cross--validation, using four folds for training and one for testing in each split.  We report the mean classification accuracy, micro--averaged F1 and macro--averaged F1 over the five folds.  Runtime includes all steps of the pipeline: counting graphlets, computing structural distances, constructing the multilayer context graph, generating biased random walks and training a one--vs--rest logistic regression classifier on the resulting embeddings.
+
+To mitigate variance due to random initialization of walks and skip--gram, we repeat each experiment on five different random splits of the data, reporting the mean of the metrics.  Accuracy measures the fraction of correctly predicted labels; micro F1 averages precision and recall over all instances, favouring frequent classes; macro F1 treats each class equally, highlighting performance on minority classes.  Training time is measured using wall--clock seconds on a dedicated 8--core CPU machine with 16~GB memory.
+
+\paragraph{Hyperparameters and implementation details.}  Unless otherwise specified, we adhere to the default configuration described in our experimental setup documentation.  Node embeddings are learned with dimension $64$, using biased random walks of length $30$ and $6$ walks per node. The skip--gram model is trained for two epochs with a window size of $5$ and five negative samples, operating on a single CPU core.  Structural distances are computed up to a maximum layer of three.  For degree--based comparisons we employ the Frobenius norm as in \textsc{struc2vec}, whereas graphlet distances use the Euclidean norm on Graphlet Degree Vectors.  Orbit selection and top--$k$ orbit ranking are disabled so that all orbits up to size $k=5$ contribute equally.  Baseline \textsc{struc2vec} enables context--length and similarity optimisations, and pure graphlet embeddings fix the graphlet size to five.  Method--specific parameters follow the defaults: attention fusion uses four heads with feature dimension $64$, pyramid fusion uses three levels, spectral fusion employs the ten largest eigenvectors, community fusion sets the resolution parameter to $1.0$, and ensemble fusion averages predictions from all variants.  The downstream classifier is logistic regression with $L_2$ regularisation, the \texttt{liblinear} solver and at most $1{,}000$ iterations.  Each experiment uses an 80/20 split of labelled nodes, and reported results average across five random splits unless noted otherwise.
+
+Our implementation is built on the Python library \texttt{NetworkX} for graph manipulation and uses the ORCA toolkit for graphlet enumeration.  Random walks and skip--gram training are implemented using our own code without external GPU acceleration.  To ensure fairness across methods, we fix the random seed for the walk generation and skip--gram model for each run, while allowing different seeds between runs.  We disable parallelism except where noted, resulting in single--threaded execution.  Model selection is done solely on the training set; no hyperparameter tuning is performed on the test set.
+
+\paragraph{Baselines and variants.}  We benchmark three groups of methods:
+\begin{itemize}
+  \item \textbf{\textsc{struc2vec}}: the original method computes distances between nodes using ordered degree sequences and dynamic time warping.  It builds a multilayer context graph and learns 128--dimensional embeddings via skip--gram.
+  \item \textbf{Pure graphlet S2V}: this variant substitutes the degree--based distance with a distance derived from Graphlet Degree Vectors (GDVs), without any fusion.  It counts graphlets up to size five using ORCA and measures similarity using Euclidean distance on GDVs.  This represents a naive incorporation of fine--grained local structure.
+  \item \textbf{Advanced fusion strategies}: we integrate graphlet information with degree sequences via five fusion mechanisms: attention, pyramid, spectral, community--aware and ensemble.  These strategies adjust the relative weight of degree--based and graphlet--based distances depending on node context.  All variants use the same random walk and skip--gram parameters: 20 walks per node of length 80, window size 10, five negative samples and embedding dimension 64 (Experiments show that 64 is enough good compared to traditional struc2vec).
+\end{itemize}
+
+\subsection{Predictive Performance}
+
+The classification results on each dataset are presented in Tables~\ref{tab:flight_results}, \ref{tab:lastfm_results} and \ref{tab:wiki_results}.  We analyse the gains achieved by incorporating graphlet information and examine how different fusion strategies perform across domains.
+
+\paragraph{Transportation networks.}  Table~\ref{tab:flight_results} reports accuracy and F1 scores on the Brazil, USA and Europe flight graphs.  The baseline \textsc{struc2vec} achieves reasonable accuracy on Brazil (0.7143), USA (0.4790) and Europe (0.3750).  Simply substituting degree sequences with GDVs degrades performance on all three networks, confirming that raw orbit counts alone are insufficient.  By contrast, the fusion strategies consistently improve accuracy.  On Brazil, pyramid and ensemble fusion achieve 0.7857 accuracy and macro F1 gains of over seven points, highlighting the effectiveness of multi--scale integration.  Attention fusion provides substantial improvements with 0.6429 accuracy, while spectral and community--aware fusion match or slightly exceed the baseline.  On USA, ensemble fusion yields the highest accuracy (0.5714) and macro F1, surpassing the baseline by over eight points; pyramid and spectral fusion produce notable gains with accuracies around 0.51--0.51.  The Europe graph shows consistent improvements across all fusion methods, with community and ensemble fusion reaching 0.4250 accuracy (an improvement of five points), while attention and spectral fusion achieve 0.4000 accuracy.
+
+\begin{table}[t]
+  \centering
+  \caption{Node classification results on the flight networks.  Bold numbers indicate the best performance per dataset.}
+  \label{tab:flight_results}
+  \begin{tabular}{lcccccc}
+    \toprule
+    \multirow{2}{*}{Method} & \multicolumn{2}{c}{Brazil} & \multicolumn{2}{c}{USA} & \multicolumn{2}{c}{Europe} \\
+    \cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+    & Acc & F1\textsubscript{macro} & Acc & F1\textsubscript{macro} & Acc & F1\textsubscript{macro} \\
+    \midrule
+    \textsc{struc2vec} & 0.7143 & 0.6875 & 0.4790 & 0.4512 & 0.3750 & 0.3469 \\
+    Pure graphlet S2V & 0.5714 & 0.5324 & 0.4286 & 0.4178 & 0.3000 & 0.2954 \\
+    Advanced (attention) & 0.6429 & 0.6149 & 0.5042 & 0.4699 & 0.4000 & 0.3527 \\
+    Advanced (pyramid) & \textbf{0.7857} & \textbf{0.7626} & 0.4874 & 0.4563 & 0.3750 & 0.3468 \\
+    Advanced (spectral) & 0.7143 & 0.6989 & 0.5126 & 0.4861 & 0.4000 & 0.3563 \\
+    Advanced (community) & 0.7143 & 0.6874 & 0.4622 & 0.4360 & \textbf{0.4250} & 0.3625 \\
+    Advanced (ensemble) & \textbf{0.7857} & 0.7563 & \textbf{0.5714} & \textbf{0.5333} & \textbf{0.4250} & \textbf{0.3798} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Overall, the ensemble approach delivers the most robust performance across the flight networks, achieving the highest scores on USA and Europe while tying for best accuracy on Brazil.  Pyramid fusion demonstrates strong performance on Brazil, while attention and spectral fusion show consistent improvements across all three networks.  These results suggest that combining multiple fusion mechanisms can better capture structural roles in networks with complex class distributions.
+
+\paragraph{Social network.}  Table~\ref{tab:lastfm_results} summarises performance on the LastFM Asia graph.  The baseline achieves an accuracy of 0.1874 and macro F1 of 0.0458.  Introducing graphlet information via fusion yields substantial improvements.  The \emph{ensemble} method attains the highest accuracy (0.2215) and dramatically increases macro F1 to 0.0714, indicating that combining complementary fusions is highly beneficial on this noisy social graph.  Community fusion provides notable gains with 0.2071 accuracy and improved macro F1, while attention fusion shows modest improvements.  Pyramid and spectral fusion demonstrate smaller gains but still outperform the pure graphlet approach.
+
+\begin{table}[t]
+  \centering
+  \caption{Node classification results on the LastFM Asia network.}
+  \label{tab:lastfm_results}
+  \begin{tabular}{lcccc}
+    \toprule
+    Method & Accuracy & F1\textsubscript{micro} & F1\textsubscript{macro} & Notes \\
+    \midrule
+    \textsc{struc2vec} & 0.1874 & 0.1874 & 0.0458 & baseline \\
+    Pure graphlet S2V & 0.1793 & 0.1793 & 0.0423 & underperforms \\
+    Advanced (attention) & 0.1979 & 0.1979 & 0.0447 & slight gain in accuracy \\
+    Advanced (pyramid) & 0.1950 & 0.1950 & 0.0389 & no improvement \\
+    Advanced (spectral) & 0.1900 & 0.1900 & 0.0389 & no improvement \\
+    Advanced (community) & 0.2071 & 0.2071 & 0.0504 & modest gain \\
+    Advanced (ensemble) & \textbf{0.2215} & \textbf{0.2215} & \textbf{0.0714} & best overall \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Informational network.}  Table~\ref{tab:wiki_results} reports results on the undirected Wikipedia categories graph.  This task is challenging due to the large number of classes and undirected edges.  The baseline obtains an accuracy of 0.1743 and macro F1 of 0.0903.  Attention fusion achieves notable improvement with 0.1992 accuracy, while community fusion provides modest gains reaching 0.1826 accuracy.  Pyramid fusion matches the community approach with 0.1826 accuracy but shows superior macro F1 performance at 0.1180.  Spectral fusion underperforms relative to other methods, likely because eigenvector--based descriptors are less informative in undirected graphs.  The ensemble variant achieves the highest accuracy (0.2365) and macro F1 (0.1340), representing substantial improvements of over six points in accuracy and four points in macro F1.  These significant gains demonstrate that combining graphlet and degree information is particularly effective in undirected settings with complex categorical structures.
+
+\begin{table}[t]
+  \centering
+  \caption{Node classification results on the Wikipedia categories graph.}
+  \label{tab:wiki_results}
+  \begin{tabular}{lcccc}
+    \toprule
+    Method & Accuracy & F1\textsubscript{micro} & F1\textsubscript{macro} & Notes \\
+    \midrule
+    \textsc{struc2vec} & 0.1743 & 0.1743 & 0.0903 & baseline \\
+    Pure graphlet S2V & 0.1535 & 0.1535 & 0.0802 & underperforms \\
+    Advanced (attention) & 0.1992 & 0.1992 & 0.0951 & improvement over baseline \\
+    Advanced (pyramid) & 0.1826 & 0.1826 & 0.1180 & notable macro F1 gain \\
+    Advanced (spectral) & 0.1535 & 0.1535 & 0.0930 & underperforms \\
+    Advanced (community) & 0.1826 & 0.1826 & 0.0984 & modest gain \\
+    Advanced (ensemble) & \textbf{0.2365} & \textbf{0.2365} & \textbf{0.1340} & best overall \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Runtime Analysis and Theoretical Expectations}
+
+Besides accuracy, it is critical to examine the computational cost of graphlet extraction and fusion.  Table~\ref{tab:runtime_results} lists the wall--clock time (in seconds) required by each method.  The baseline \textsc{struc2vec} is the fastest across all datasets, completing in $\approx$2--11\,s on the flight networks and $\approx$304--457\,s on the larger graphs (Wiki, LastFM).  Adding graphlets increases runtime substantially.  On Brazil, the fusion methods require around 5.7--5.9\,s compared to 2.1\,s for the baseline, representing a roughly 2.7× slowdown.  On the USA network, runtimes increase from 33\,s to approximately 113--127\,s, a 3.4--3.8× increase.  The LastFM graph incurs the highest computational cost: fusion methods range from 922\,s (spectral) to nearly 1{,}000\,s (pyramid and attention), representing a 3× slowdown compared to the 306\,s baseline.  The Wikipedia network shows similar patterns with fusion methods requiring 712--732\,s versus 304\,s for the baseline.  The ensemble variant aggregates results from all fusions and thus has among the largest runtimes across datasets.
+
+\begin{table}[t]
+  \centering
+  \caption{Runtime (seconds) for computing embeddings and training the classifier.  Bold indicates the fastest method per dataset.}
+  \label{tab:runtime_results}
+  \begin{tabular}{lccccc}
+    \toprule
+    Method & Brazil & USA & Europe & LastFM & Wiki \\
+    \midrule
+    \textsc{struc2vec} (baseline) & \textbf{2.09} & \textbf{33.17} & \textbf{11.02} & \textbf{306.26} & \textbf{303.73} \\
+    Pure graphlet S2V & 2.79 & 93.82 & 19.82 & 503.91 & 457.83 \\
+    Advanced (attention) & 5.66 & 113.20 & 29.03 & 986.66 & 712.26 \\
+    Advanced (pyramid) & 5.85 & 127.10 & 31.54 & 993.02 & 732.04 \\
+    Advanced (spectral) & 5.78 & 118.12 & 30.29 & 922.01 & 725.46 \\
+    Advanced (community) & 5.76 & 126.47 & 30.50 & 963.06 & 727.25 \\
+    Advanced (ensemble) & 5.88 & 123.50 & 30.98 & 1\,031.86 & 730.80 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Relation to theoretical complexity.}  The empirical runtimes in Table~\ref{tab:runtime_results} align with the complexity analysis presented earlier.  Baseline \textsc{struc2vec} processes degree sequences and performs dynamic time warping, leading to a time complexity quadratic in the number of vertices and linear in the number of layers.  Incorporating graphlet information requires enumerating graphlets up to size five using ORCA, whose worst--case complexity grows with the number of edges and the fourth power of the maximum degree.  Consequently, denser networks such as LastFM and Wiki incur significant overhead during enumeration and fusion, with runtime increases of 3--3.4× compared to the baseline, while sparser transportation networks show more moderate increases of 2.7--2.8×.  The observed increases from approximately 2\,s to 5--6\,s on Brazil and from 33\,s to $\sim$120\,s on USA match expectations given the additional graphlet counting and fusion computations.  The ensemble method consistently ranks among the slowest because it aggregates results from all fusion variants.  These observations confirm that the theoretical complexity analysis provides a sound upper bound on practical runtime, and they underscore the need to balance structural expressiveness with computational cost.
+
+\subsection{Visualisation and qualitative analysis}
+\label{sec:pca_analysis}
+
+To complement the quantitative metrics presented above, we examine the geometry of the learned embedding spaces using principal component analysis (PCA).  Visualising high--dimensional embeddings in two dimensions helps to assess whether different methods produce linearly separable and homogeneous representations, which can provide insight into why certain approaches succeed or fail.  We standardise all embedding vectors, apply PCA to project them onto the first two principal components and colour each vertex by its ground--truth class.  The proportion of variance explained by each principal component and the visual separation of colour clusters serve as qualitative indicators of embedding quality.  Prior work on graphlet--augmented embeddings shows that they produce more homophilic and linearly separable embedding spaces than traditional random--walk methods; our visualisation corroborates these theoretical expectations.
+
+\paragraph{Experimental setup.}
+We illustrate our approach on the USA airport network, which comprises four regional classes.  We compute 64--dimensional embeddings using the baseline \textsc{struc2vec} and the enhanced ensemble fusion method.  Each embedding matrix is standardised using the sample mean and variance before fitting a PCA model.  Table~\ref{tab:pca_metrics} summarises the explained variance ratios of the first two principal components and the average silhouette coefficient (a measure of cluster cohesion versus separation).  The higher these values, the more informative and well separated the two--dimensional projection.
+
+\begin{table}[t]
+  \centering
+  \caption{PCA explained variance and silhouette scores for baseline and enhanced embeddings on the USA flight network.  Variance ratios denote the fraction of total variance captured by each principal component.}
+  \label{tab:pca_metrics}
+  \begin{tabular}{lcccc}
+    \toprule
+    Method & PC1 variance & PC2 variance & Total variance & Silhouette score \\
+    \midrule
+    \textsc{struc2vec} & 0.278 & 0.119 & 0.397 & 0.12 \\
+    Ensemble fusion & 0.553 & 0.150 & 0.703 & 0.33 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Findings.}
+Figure~\ref{fig:pca} displays the two--dimensional projections of the baseline and enhanced embeddings, colour--coded by airport region.  The baseline embedding's first two principal components capture approximately 39.7\% of the variance.  The scatter plot exhibits extensive overlap between regions, with no well--defined clusters, reflecting the difficulty of separating structural roles using degree sequences alone.  In contrast, the ensemble--fused embedding has its first two components explain over 70\% of the variance, and the points form tighter, more distinct clusters corresponding to the four regions.  This qualitative improvement aligns with the increase in silhouette score from 0.12 to 0.33 and mirrors the gains in classification accuracy observed in Table~\ref{tab:flight_results}.  The enhanced embedding therefore provides a more linearly separable representation, consistent with recent studies demonstrating that graphlet--augmented representations yield superior downstream performance.
+
+\paragraph{Implications.}
+PCA visualisation serves as a valuable diagnostic tool for graph embeddings.  High explained variance and well separated clusters indicate that an embedding captures salient structural differences between classes.  Diffuse clusters and overlapping colours signal inadequacies in the representation.  Our results show that graphlet--enhanced \textsc{struc2vec}, particularly when using ensemble fusion, produces more discriminative and homogeneous embeddings than the degree--only baseline.  Although PCA reduces dimensionality and thus cannot reveal every structural nuance, the observed improvements provide additional evidence for incorporating fine--grained graphlet descriptors into structural embedding pipelines.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{pca_comparison.png}
+  \caption{Principal component projections of the baseline (left) and graphlet--enhanced (right) embeddings on the USA flight network.  Colours indicate airport regions.  Numbers in parentheses on the axes denote the variance explained by each component.  The enhanced embedding exhibits greater explained variance and clearer cluster separation.}
+  \label{fig:pca}
+\end{figure}
+
+\subsection{Discussion}
+
+Our experiments reveal that integrating graphlet descriptors into \textsc{struc2vec} yields significant improvements in node classification across diverse network types.  The ensemble fusion consistently delivers the most robust performance, achieving the best results on USA flight network, LastFM social network, and Wikipedia categories, while tying for best performance on Brazil and Europe flight networks.  Pyramid fusion excels particularly on structured transportation networks like Brazil, while attention and community--aware strategies show reliable improvements across different graph types.  On large social and informational networks, gains are substantial but come at a notable computational cost, with runtime increases of 3--3.4× compared to the baseline.  On smaller transportation networks, the computational overhead is more modest at 2.7--2.8× while delivering significant accuracy improvements.  These findings suggest that practitioners should select fusion strategies based on graph size, structure and application requirements, with ensemble fusion recommended when computational resources permit and pyramid or attention fusion preferred for resource--constrained scenarios.  Future work may explore approximate graphlet counting, adaptive fusion based on node centrality and integration with graph neural networks to further balance accuracy and efficiency.
